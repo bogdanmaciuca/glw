@@ -1,4 +1,5 @@
 #define DEBUG
+#include <vector>
 #define GLW_IMPLEMENTATION
 #include "../glw.hpp"
 
@@ -14,7 +15,7 @@ int main() {
     std::vector<glw::u32> indices = { 0, 1, 2 };
     glw::IndexBuffer<glw::u32> ibo(indices);
 
-    glw::VertexArrayObject vao(&vbo, &ibo, { {GL_FLOAT, 2} });
+    glw::VertexArrayObject vao(&vbo, { {GL_FLOAT, 2} }, &ibo);
 
     const std::string vert_source =
         "#version 330 core\n"
@@ -60,9 +61,9 @@ int main() {
         else if (keys[SDL_SCANCODE_D])
             camera.Move(glw::CameraRight, delta_time);
 
-        camera.ProcessMouse(context);
+        camera.ProcessMouse();
 
-        shader.SetMat4("uMVP", camera.GetViewProjection());
+        shader.SetMat4("uMVP", camera.GetProjectionMatrix() * camera.GetViewMatrix());
 
         glClear(GL_COLOR_BUFFER_BIT);
         vao.Draw();

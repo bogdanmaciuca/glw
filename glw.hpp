@@ -124,6 +124,11 @@ namespace glw {
 
     class ShaderStorageBuffer : public GenericBuffer<u8> {
     public:
+        ShaderStorageBuffer(u32 bind_index = 0, GLenum usage = GL_STATIC_DRAW)
+            : GenericBuffer<u8>(GL_SHADER_STORAGE_BUFFER, usage)
+        {
+            BindToIndex(bind_index);
+        }
         ShaderStorageBuffer(const void* data, u32 byte_size, u32 bind_index = 0, GLenum usage = GL_STATIC_DRAW)
             : GenericBuffer<u8>(data, byte_size, GL_SHADER_STORAGE_BUFFER, usage)
         {
@@ -141,6 +146,9 @@ namespace glw {
     template<typename VertexT, typename IndexT = void>
         class VertexArrayObject : public GLObject {
         public:
+            VertexArrayObject() {
+                glGenVertexArrays(1, &m_ID);
+            }
             VertexArrayObject(
                 const VertexBuffer<VertexT>* vertex_buffer,
                 const std::initializer_list<VertexAttribute>& attributes,
@@ -193,12 +201,17 @@ namespace glw {
         };
     class Shader : public GLObject {
     public:
+        Shader() {}
         Shader(const std::string& vert_source, const std::string& frag_source);
+        Shader(const std::string& source);
         ~Shader();
         void Bind();
+        void Compile(const std::string& vert_source, const std::string& frag_source);
         void Recompile(const std::string& vert_source, const std::string& frag_source);
+        void Compile(const std::string& source);
+        void Recompile(const std::string& source);
         void SetInt(const std::string& name, i32 value);
-        void SetIntVec(const std::string& name, const std::span<i32> value);
+        void SetIntVec(const std::string& name, const std::span<const i32>& value);
         void SetFloat(const std::string& name, float value);
         void SetFloatVec(const std::string& name, const std::span<float> value);
         void SetVec3(const std::string& name, const glm::vec3& value);
@@ -209,7 +222,46 @@ namespace glw {
     private:
         void CheckErrors(u32 shader, GLenum type);
         u32 CreateShader(GLenum type, const std::string& filename);
-        void Compile(const std::string& vert_source, const std::string& frag_source);
+    };
+
+    // TODO: maybe add alignment?
+    struct TextureConfig {
+        GLenum type = GL_TEXTURE_2D;
+        GLenum format = GL_RGBA;
+        GLenum data_format = GL_RGBA;
+        GLenum data_type = GL_UNSIGNED_BYTE;
+        GLenum min_filter = GL_NEAREST;
+        GLenum mag_filter = GL_LINEAR;
+        GLenum wrap = GL_REPEAT;
+        i32 width = 0, height = 0, depth = 0;
+        i32 alignment = 4;
+        void* data = nullptr;
+    };
+
+    class GenericTexture : public GLObject {
+    public:
+        GenericTexture();
+        GenericTexture(const TextureConfig& config);
+        void FromConfig(const TextureConfig& config);
+        void Bind(u32 texture_slot = 0);
+        void GenerateMipmap();
+    protected:
+        TextureConfig m_config;
+    };
+
+    class Texture2D : public GenericTexture {
+    public:
+        Texture2D() {}
+        Texture2D(const TextureConfig& config);
+        void Source();
+        void BindImage(u32 slot, GLenum access, i32 mipmap_level = 0);
+    };
+    class Texture3D : public GenericTexture {
+    public:
+        Texture3D() {}
+        Texture3D(const TextureConfig& config);
+        void Source();
+        void BindImage(u32 slot, GLenum access, i32 mipmap_level = 0);
     };
 
     enum CameraMoveDir { CameraForward, CameraBackward, CameraLeft, CameraRight };
@@ -223,9 +275,8 @@ namespace glw {
         static constexpr glm::vec3 DefaultUpVec = { 0, 1, 0 };
 
         FPSCamera(float FOV, float w_h_ratio);
-        glm::vec3 GetFrontVec();
-        glm::mat4 GetViewMatrix();
-        glm::mat4 GetProjection();
+        glm::mat4 GetViewMatrix() const;
+        glm::mat4 GetProjectionMatrix() const;
         void ProcessMouse();
         void Move(CameraMoveDir dir, float delta_time);
         glm::vec3 GetPos() const;
@@ -253,7 +304,7 @@ namespace glw {
 };
 
 // Debugging
-//#define GLW_IMPLEMENTATION
+#define GLW_IMPLEMENTATION
 
 #ifdef GLW_IMPLEMENTATION
 
@@ -309,7 +360,14 @@ namespace glw {
         }
 
         // VSync
-        SDL_GL_SetSwapInterval(-1);
+        if (SDL_GL_SetSwapInterval(-1) != 0) {
+            SDL_LogError(
+                SDL_LOG_CATEGORY_APPLICATION,
+                "Failed to set VSYNC: %s\n", SDL_GetError()
+            );
+            SDL_DestroyWindow(m_window);
+            SDL_Quit();
+        }
 
         // GLEW
         GLenum glew_error = glewInit();
@@ -349,8 +407,8 @@ namespace glw {
     SDL_Window* Context::GetWindow() { return m_window; }
     SDL_GLContext Context::GetContext() { return m_context; }
     void GLAPIENTRY Context::MessageCallback(
-        GLenum source, GLenum type, GLuint id, GLenum severity,
-        GLsizei length, const GLchar* message, const void* userParam)
+        GLenum, GLenum type, GLuint, GLenum severity,
+        GLsizei, const GLchar* message, const void*)
     {
         SDL_LogError(
             SDL_LOG_CATEGORY_APPLICATION,
@@ -365,20 +423,47 @@ namespace glw {
     Shader::Shader(const std::string& vert_source, const std::string& frag_source) {
         Compile(vert_source, frag_source);
     }
+    Shader::Shader(const std::string& vert_source) {
+        Compile(vert_source);
+    }
     Shader::~Shader() {
         glDeleteProgram(m_ID);
     }
     void Shader::Bind() {
         glUseProgram(m_ID);
     }
+    void Shader::Compile(const std::string& vert_source, const std::string& frag_source) {
+        u32 vertex_shader = CreateShader(GL_VERTEX_SHADER, vert_source);
+        u32 fragment_shader = CreateShader(GL_FRAGMENT_SHADER, frag_source);
+        m_ID = glCreateProgram();
+        glAttachShader(m_ID, vertex_shader);
+        glAttachShader(m_ID, fragment_shader);
+        glLinkProgram(m_ID);
+        glDetachShader(m_ID, vertex_shader);
+        glDeleteShader(vertex_shader);
+        glDetachShader(m_ID, fragment_shader);
+        glDeleteShader(fragment_shader);
+    }
+    void Shader::Compile(const std::string& source) {
+        u32 compute_shader = CreateShader(GL_COMPUTE_SHADER, source);
+        m_ID = glCreateProgram();
+        glAttachShader(m_ID, compute_shader);
+        glLinkProgram(m_ID);
+        glDetachShader(m_ID, compute_shader);
+        glDeleteShader(compute_shader);
+    }
     void Shader::Recompile(const std::string& vert_source, const std::string& frag_source) {
         glDeleteProgram(m_ID);
         Compile(vert_source, frag_source);
     }
+    void Shader::Recompile(const std::string& source) {
+        glDeleteProgram(m_ID);
+        Compile(source);
+    }
     void Shader::SetInt(const std::string& name, i32 value) {
         glUniform1i(glGetUniformLocation(m_ID, name.c_str()), value);
     }
-    void Shader::SetIntVec(const std::string& name, const std::span<i32> value) {
+    void Shader::SetIntVec(const std::string& name, const std::span<const i32>& value) {
         glUniform1iv(glGetUniformLocation(m_ID, name.c_str()), value.size(), value.data());
     }
     void Shader::SetFloat(const std::string& name, float value) {
@@ -435,26 +520,67 @@ namespace glw {
         CheckErrors(shader, type);
         return shader;
     }
-    void Shader::Compile(const std::string& vert_source, const std::string& frag_source) {
-        u32 vertex_shader = CreateShader(GL_VERTEX_SHADER, vert_source);
-        u32 fragment_shader = CreateShader(GL_FRAGMENT_SHADER, frag_source);
-        m_ID = glCreateProgram();
-        glAttachShader(m_ID, vertex_shader);
-        glAttachShader(m_ID, fragment_shader);
-        glLinkProgram(m_ID);
-        glDetachShader(m_ID, vertex_shader);
-        glDeleteShader(vertex_shader);
-        glDetachShader(m_ID, fragment_shader);
-        glDeleteShader(fragment_shader);
+
+    GenericTexture::GenericTexture() {
+        glGenTextures(1, &m_ID);
+    }
+    GenericTexture::GenericTexture(const TextureConfig& config) {
+        glGenTextures(1, &m_ID);
+        FromConfig(config);
+    }
+    void GenericTexture::FromConfig(const TextureConfig& config) {
+        m_config = config;
+        glBindTexture(m_config.type, m_ID);
+        glTexParameteri(m_config.type, GL_TEXTURE_MIN_FILTER, m_config.min_filter);
+        glTexParameteri(m_config.type, GL_TEXTURE_MAG_FILTER, m_config.mag_filter);
+        glTexParameteri(m_config.type, GL_TEXTURE_WRAP_S, m_config.wrap);	
+        glTexParameteri(m_config.type, GL_TEXTURE_WRAP_T, m_config.wrap);	
+        glTexParameteri(m_config.type, GL_TEXTURE_WRAP_R, m_config.wrap);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, m_config.alignment);
+    }
+    void GenericTexture::Bind(u32 texture_slot) {
+        glActiveTexture(GL_TEXTURE0 + texture_slot);
+        glBindTexture(m_config.type, m_ID);
+    }
+    void GenericTexture::GenerateMipmap() {
+        glGenerateMipmap(m_config.type);
+    }
+
+    Texture2D::Texture2D(const TextureConfig& config)
+        : GenericTexture(config) {}
+    void Texture2D::Source() {
+        glTexImage2D(
+            m_config.type, 0, m_config.format,
+            m_config.width, m_config.height, 0,
+            m_config.data_format, m_config.data_type, m_config.data
+        );
+    }
+    void Texture2D::BindImage(u32 slot, GLenum access, i32 mipmap_level) {
+        glBindTexture(GL_TEXTURE_2D, m_ID);
+        glBindImageTexture(slot, m_ID, mipmap_level, GL_FALSE, 0, access, m_config.format);
+    }
+
+    Texture3D::Texture3D(const TextureConfig& config)
+        : GenericTexture(config) {}
+    void Texture3D::Source() {
+        glTexImage3D(
+            m_config.type, 0, m_config.format,
+            m_config.width, m_config.height, m_config.depth, 0,
+            m_config.data_format, m_config.data_type, m_config.data
+        );
+    }
+    void Texture3D::BindImage(u32 slot, GLenum access, i32 mipmap_level) {
+        glBindTexture(GL_TEXTURE_3D, m_ID);
+        glBindImageTexture(slot, m_ID, mipmap_level, GL_TRUE, 0, access, m_config.format);
     }
 
     FPSCamera::FPSCamera(float FOV, float w_h_ratio) {
         m_projection = glm::perspective(glm::radians(FOV), w_h_ratio, m_z_near, m_z_far);
     }
-    glm::mat4 FPSCamera::GetViewMatrix() {
+    glm::mat4 FPSCamera::GetViewMatrix() const {
         return glm::lookAt(m_pos, m_pos + m_front, m_up);
     }
-    glm::mat4 FPSCamera::GetProjection() {
+    glm::mat4 FPSCamera::GetProjectionMatrix() const {
         return m_projection;
     }
     void FPSCamera::ProcessMouse() {
