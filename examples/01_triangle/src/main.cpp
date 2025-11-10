@@ -11,7 +11,7 @@ int main() {
     };
     auto vao = glw::CreateVAO(vertices).value();
 
-    auto shader = glw::LoadGraphicsShader(
+    auto shader = glw::CreateGraphicsShader(
         "examples/01_triangle/shaders/basic.vert",
         "examples/01_triangle/shaders/basic.frag"
     ).value();

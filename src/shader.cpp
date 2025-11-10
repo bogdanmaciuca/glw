@@ -53,7 +53,7 @@ namespace glw {
         glUniformMatrix4fv(glGetUniformLocation(program_id, name.c_str()), 1, GL_FALSE, &value[0][0]);
     }
 
-    std::expected<GraphicsShader, bool> LoadGraphicsShader(
+    std::expected<GraphicsShader, bool> CreateGraphicsShader(
         const std::string& vertex_path,
         const std::string& fragment_path
     ) {
@@ -104,7 +104,7 @@ namespace glw {
     }
 
     bool GraphicsShader::Reload() {
-        auto new_shader = LoadGraphicsShader(vertex_path, fragment_path);
+        auto new_shader = CreateGraphicsShader(vertex_path, fragment_path);
         if (!new_shader)
             return false;
 
@@ -113,7 +113,7 @@ namespace glw {
         return true;
     }
 
-    std::expected<ComputeShader, bool> LoadComputeShader(const std::string& path) {
+    std::expected<ComputeShader, bool> CreateComputeShader(const std::string& path) {
         auto source = ReadFile(path);
         if (!source) {
             Debug::Print("Could not load shader source from: {}", path);
@@ -121,12 +121,25 @@ namespace glw {
         }
 
         auto compute_shader = CreateShader(GL_COMPUTE_SHADER, source.value());
+        if (!compute_shader) {
+            Debug::Print("Could not compile compute shader");
+            return std::unexpected(false);
+        }
 
         ComputeShader result;
         result.path = path;
         result.program_id = glCreateProgram();
         glAttachShader(result.program_id, compute_shader);
         glLinkProgram(result.program_id);
+
+        int success;
+        char infoLog[1024];
+        glGetProgramiv(result.program_id, GL_LINK_STATUS, &success);
+        if (!success) {
+            glGetProgramInfoLog(result.program_id, 1024, NULL, infoLog);
+            Debug::Print("Shader linking error: \n{}", infoLog);
+        }
+
         glDetachShader(result.program_id, compute_shader);
         glDeleteShader(compute_shader);
 
@@ -134,13 +147,50 @@ namespace glw {
     }
 
     bool ComputeShader::Reload() {
-        auto new_shader = LoadComputeShader(path);
+        auto new_shader = CreateComputeShader(path);
         if (!new_shader)
             return false;
 
         Release();
         *this = new_shader.value();
         return true;
+    }
+
+    void ComputeShader::Dispatch(
+        unsigned int num_groups_x,
+        unsigned int num_groups_y,
+        unsigned int num_groups_z
+    ) {
+        glDispatchCompute(num_groups_x, num_groups_y, num_groups_z);
+    }
+
+    // TODO: try and make constexpr
+    void ComputeShader::MemoryBarrier(std::bitset<MEM_BARRIER_COUNT> barriers) {
+        unsigned int gl_barriers = 0;
+        for (int i = 0; i < barriers.size(); i++) {
+            if (barriers[i] == true) {
+                switch ((ComputeMemoryBarrier)i) {
+                    case MEM_BARRIER_IMG_ACCESS: gl_barriers |= GL_SHADER_IMAGE_ACCESS_BARRIER_BIT;
+                    case MEM_BARRIER_COUNT: default:
+                        Debug::Print("Invalid ComputeMemoryBarrier value: {}", i);
+                        break;
+                }
+            }
+        }
+    }
+
+    ivec3 ComputeShader::GetMaxWorkGroupCount() {
+        ivec3 result;
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &result.x);
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &result.y);
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &result.z);
+        return result;
+    }
+    
+    int ComputeShader::GetMaxInvocationCount() {
+        int result;
+        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, 0, &result);
+        return result;
     }
 
     std::expected<std::string, bool> ReadFile(const std::string& path) {

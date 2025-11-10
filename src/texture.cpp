@@ -20,6 +20,19 @@ namespace glw {
         glBindTextureUnit(unit, texture_id);
     }
 
+    void Texture::BindAsImage(unsigned int unit, ImageAccess access) {
+        GLenum gl_access;
+        switch (access) {
+            case IMG_READ:      gl_access = GL_READ_ONLY;  break;
+            case IMG_WRITE:     gl_access = GL_WRITE_ONLY; break;
+            case IMG_READWRITE: gl_access = GL_READ_WRITE; break;
+            default:
+                Debug::Print("Invalid ImageAccess value: {}", (int)access);
+                break;
+        }
+        glBindImageTexture(unit, texture_id, 0, false, 0, gl_access, GL_RGBA8);
+    }
+
     std::expected<Texture, bool> CreateTexture(int width, int height) {
         Texture result;
         glCreateTextures(GL_TEXTURE_2D, 1, &result.texture_id);

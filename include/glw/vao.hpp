@@ -3,6 +3,7 @@
 
 #include <expected>
 #include <vector>
+#include <type_traits>
 
 #include "../extern/glad/glad.h"
 
@@ -21,7 +22,10 @@ namespace glw {
         void Draw();
     };
     template<IsVertex V, typename I = u32>
-    std::expected<VAO, bool> CreateVAO(std::vector<V> vertices, std::vector<I> indices = {}) {
+    std::expected<VAO, bool> CreateVAO(
+        const std::vector<V> vertices,
+        const std::vector<I> indices = {}
+    ) {
         if (vertices.empty()) {
             Debug::Print("vertices cannot be empty");
             return std::unexpected(false);
@@ -58,7 +62,7 @@ namespace glw {
 
         // Vertex attributes
         ForEachVertexField(vertices[0], [](int i, auto field, size_t offset) {
-            using FieldType = decltype(field);
+            using FieldType = std::decay_t<decltype(field)>;
             const static int stride = sizeof(vertices[0]);
 
             int num;
@@ -81,7 +85,7 @@ namespace glw {
             }
 
             glEnableVertexAttribArray(i);
-            glVertexAttribPointer(i, num, GL_FLOAT, GL_FALSE, stride, (void*)offset);
+            glVertexAttribPointer(i, num, type, GL_FALSE, stride, (void*)offset);
         });
 
         return result;

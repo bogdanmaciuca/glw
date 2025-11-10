@@ -13,24 +13,31 @@ namespace glw {
 
     template<typename H, typename... T>
     class Vertex<H, T...> {
-        public:
-            constexpr static usize field_num = 1 + sizeof...(T);
+    public:
+        constexpr static usize field_num = 1 + sizeof...(T);
 
-            Vertex() = default;
+        Vertex() = default;
 
-            template<typename Head, typename... Tail>
-            explicit Vertex(Head&& h, Tail&&... t)
-                : m_head(std::forward<Head>(h)), m_tail(std::forward<Tail>(t)...) {}
+        template<typename Head, typename... Tail>
+        explicit Vertex(Head&& h, Tail&&... t)
+            : m_head(std::forward<Head>(h)), m_tail(std::forward<Tail>(t)...) {}
 
-            template<unsigned int I>
-            auto& get() {
-                static_assert(I >= 0 && I < field_num, "Out of bounds");
-                if constexpr (I == 0) return m_head;
-                else return m_tail.template get<I-1>();
-            }
-        private:
-            H            m_head;
-            Vertex<T...> m_tail;
+        template<unsigned int I>
+        auto& get() {
+            static_assert(I >= 0 && I < field_num, "Out of bounds");
+            if constexpr (I == 0) return m_head;
+            else return m_tail.template get<I-1>();
+        }
+
+        template<unsigned int I>
+        const auto& get() const {
+            static_assert(I >= 0 && I < field_num, "Out of bounds");
+            if constexpr (I == 0) return m_head;
+            else return m_tail.template get<I-1>();
+        }
+    private:
+        H            m_head;
+        Vertex<T...> m_tail;
     };
 
     template<typename... Types>
@@ -47,7 +54,7 @@ namespace glw {
     concept IsVertex = IsVertexTrait<T>::value;
 
     template<IsVertex V, typename F, usize I = 0, usize Offset = 0>
-    void ForEachVertexField(V& vertex, const F& func) {
+    void ForEachVertexField(const V& vertex, const F& func) {
         if constexpr (I < V::field_num) {
             func(I, vertex.template get<I>(), Offset);
 

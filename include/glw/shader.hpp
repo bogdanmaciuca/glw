@@ -7,6 +7,7 @@
 #include <expected>
 #include <string>
 #include <span>
+#include <bitset>
 
 #include "types.hpp"
 
@@ -31,16 +32,32 @@ namespace glw {
         std::string fragment_path;
         bool Reload();
     };
-    std::expected<GraphicsShader, bool> LoadGraphicsShader(
+    std::expected<GraphicsShader, bool> CreateGraphicsShader(
         const std::string& vertex_path,
         const std::string& fragment_path
     );
     
+    // TODO: Do for all barriers
+    enum ComputeMemoryBarrier {
+        MEM_BARRIER_IMG_ACCESS,
+
+        MEM_BARRIER_COUNT
+    };
+
     struct ComputeShader : public Shader {
         std::string path;
         bool Reload();
+        void Dispatch(
+            unsigned int num_groups_x,
+            unsigned int num_groups_y,
+            unsigned int num_groups_z
+        );
+        void MemoryBarrier(std::bitset<MEM_BARRIER_COUNT> barriers);
+        
+        static ivec3 GetMaxWorkGroupCount();
+        static int GetMaxInvocationCount();
     };
-    std::expected<ComputeShader, bool> LoadComputeShader(const std::string& path);
+    std::expected<ComputeShader, bool> CreateComputeShader(const std::string& path);
 }
 
 #endif // SHADER_HPP
