@@ -1,9 +1,13 @@
 #ifndef GLW_HPP
 #define GLW_HPP
 
+#define GLFW_INCLUDE_NONE
+
 #include <string>
 
 #include "types.hpp"
+#include "input.hpp"
+#include "math.hpp"
 #include "vertex.hpp"
 #include "shader.hpp"
 #include "vao.hpp"

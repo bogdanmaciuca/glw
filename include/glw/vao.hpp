@@ -5,7 +5,7 @@
 #include <vector>
 #include <type_traits>
 
-#include "../extern/glad/glad.h"
+#include "glad.h"
 
 #include "types.hpp"
 #include "vertex.hpp"

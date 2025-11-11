@@ -8,7 +8,7 @@
 #include "glw/debug.hpp"
 
 namespace glw {
-    static GLFWwindow* s_window;
+    GLFWwindow* g_window;
 
     bool Initialize(const std::string& title, int width, int height, bool debug) {
         Debug::Set(debug);
@@ -21,8 +21,8 @@ namespace glw {
             return false;
         }
 
-        s_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
-        if (s_window == nullptr) {
+        g_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
+        if (g_window == nullptr) {
             const char *error;
             glfwGetError(&error);
             Debug::Print("Could not create window: {}", error);
@@ -30,7 +30,7 @@ namespace glw {
             return false;
         }
 
-        glfwMakeContextCurrent(s_window);
+        glfwMakeContextCurrent(g_window);
 
         if (gladLoadGLLoader((GLADloadproc)glfwGetProcAddress) == false) {
             Debug::Print("Could not initialize GLAD");
@@ -44,12 +44,12 @@ namespace glw {
     }
 
     void Terminate() {
-        glfwDestroyWindow(s_window);
+        glfwDestroyWindow(g_window);
         glfwTerminate();
     }
 
     bool ShouldQuit() {
-        return glfwWindowShouldClose(s_window);
+        return glfwWindowShouldClose(g_window);
     }
 
     void PollEvents() {
@@ -57,7 +57,7 @@ namespace glw {
     }
 
     void SwapBuffers() {
-        glfwSwapBuffers(s_window);
+        glfwSwapBuffers(g_window);
     }
 
     void Clear() {

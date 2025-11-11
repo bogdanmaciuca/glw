@@ -1,4 +1,5 @@
 add_subdirectory(01_triangle)
 add_subdirectory(02_texture)
 add_subdirectory(03_compute)
-
+add_subdirectory(04_ssbo)
+add_subdirectory(05_input)
