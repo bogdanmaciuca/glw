@@ -1,6 +1,8 @@
 #ifndef MATH_HPP
 #define MATH_HPP
 
+#include <concepts>
+
 #include "types.hpp"
 
 namespace glw {
@@ -26,6 +28,18 @@ namespace glw {
         float FOV, float width, float height,
         float z_near = 0.1f, float z_far = 100.0f
     );
+
+    auto Clamp(const auto& val, const auto& min, const auto& max) {
+        return glm::clamp(val, min, max);
+    }
+
+    auto Sin(const auto& x) {
+        return glm::sin(x);
+    }
+
+    auto Cos(const auto& x) {
+        return glm::cos(x);
+    }
 }
 
 #endif // MATH_HPP
