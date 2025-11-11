@@ -41,7 +41,7 @@ int main() {
     }
     glw::ComputeShader compute_shader = compute_shader_opt.value();
 
-    // TODO:
+    // TODO: GetMaxWorkGroupCount() not working right now
     glw::ivec3 max_group_count = glw::ComputeShader::GetMaxWorkGroupCount();
     std::println("Max group count: x = {}, y = {}, z = {}",
         max_group_count.x, max_group_count.y, max_group_count.z);

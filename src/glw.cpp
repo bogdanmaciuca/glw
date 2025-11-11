@@ -3,6 +3,7 @@
 #include <string>
 
 #include "GLFW/glfw3.h"
+#include "glad.h"
 
 #include "glw/debug.hpp"
 
@@ -35,6 +36,9 @@ namespace glw {
             Debug::Print("Could not initialize GLAD");
             return false;
         }
+
+        Debug::Print("INFO: OpenGL version: {}", (char*)glGetString(GL_VERSION));
+        Debug::Print("INFO: GLSL version: {}", (char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
 
         return true;
     }

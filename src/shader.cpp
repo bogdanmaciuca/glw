@@ -189,7 +189,7 @@ namespace glw {
     
     int ComputeShader::GetMaxInvocationCount() {
         int result;
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, 0, &result);
+        glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &result);
         return result;
     }
 
