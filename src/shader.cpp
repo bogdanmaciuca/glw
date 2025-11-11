@@ -1,6 +1,6 @@
 #include "glw/shader.hpp"
 
-#include <expected>
+#include <optional>
 #include <string>
 
 #include "glad.h"
@@ -9,7 +9,7 @@
 #include "glw/debug.hpp"
 
 namespace glw {
-    std::expected<std::string, bool> ReadFile(const std::string& path);
+    std::optional<std::string> ReadFile(const std::string& path);
     void CheckErrors(u32 shader, GLenum type);
     u32 CreateShader(GLenum type, const std::string& filename);
 
@@ -53,32 +53,32 @@ namespace glw {
         glUniformMatrix4fv(glGetUniformLocation(program_id, name.c_str()), 1, GL_FALSE, &value[0][0]);
     }
 
-    std::expected<GraphicsShader, bool> CreateGraphicsShader(
+    std::optional<GraphicsShader> CreateGraphicsShader(
         const std::string& vertex_path,
         const std::string& fragment_path
     ) {
         auto vertex_source = ReadFile(vertex_path);
         if (!vertex_source) {
             Debug::Print("Could not load vertex shader source from: {}", vertex_path);
-            return std::unexpected(false);
+            return std::nullopt;
         }
 
         auto fragment_source = ReadFile(fragment_path);
         if (!fragment_source) {
             Debug::Print("Could not load fragment shader source from: {}", fragment_path);
-            return std::unexpected(false);
+            return std::nullopt;
         }
 
         auto vertex_shader = CreateShader(GL_VERTEX_SHADER, vertex_source.value());
         if (!vertex_shader) {
             Debug::Print("Could not compile vertex shader.");
-            return std::unexpected(false);
+            return std::nullopt;
         }
 
         auto fragment_shader = CreateShader(GL_FRAGMENT_SHADER, fragment_source.value());
         if (!fragment_shader) {
             Debug::Print("Could not compile fragment shader.");
-            return std::unexpected(false);
+            return std::nullopt;
         }
 
         GraphicsShader result;
@@ -113,17 +113,17 @@ namespace glw {
         return true;
     }
 
-    std::expected<ComputeShader, bool> CreateComputeShader(const std::string& path) {
+    std::optional<ComputeShader> CreateComputeShader(const std::string& path) {
         auto source = ReadFile(path);
         if (!source) {
             Debug::Print("Could not load shader source from: {}", path);
-            return std::unexpected(false);
+            return std::nullopt;
         }
 
         auto compute_shader = CreateShader(GL_COMPUTE_SHADER, source.value());
         if (!compute_shader) {
             Debug::Print("Could not compile compute shader");
-            return std::unexpected(false);
+            return std::nullopt;
         }
 
         ComputeShader result;
@@ -193,11 +193,11 @@ namespace glw {
         return result;
     }
 
-    std::expected<std::string, bool> ReadFile(const std::string& path) {
+    std::optional<std::string> ReadFile(const std::string& path) {
         FILE* file = fopen(path.c_str(), "rb");
         if (file == nullptr) {
             Debug::Print("Failed to open file: {}", path);
-            return std::unexpected(false);
+            return std::nullopt;
         }
 
         fseek(file, 0, SEEK_END);
@@ -207,7 +207,7 @@ namespace glw {
         if (length < 0) {
             fclose(file);
             Debug::Print("Failed to determine file size: {}", path);
-            return std::unexpected(false);
+            return std::nullopt;
         }
 
         std::string content(length, '\0');
@@ -215,7 +215,7 @@ namespace glw {
         if (fread(&content[0], 1, length, file) != (size_t)length) {
             fclose(file);
             Debug::Print("Failed to read file: {}", path);
-            return std::unexpected(false);
+            return std::nullopt;
         }
 
         fclose(file);

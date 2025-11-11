@@ -3,7 +3,7 @@
 
 #include "glw/texture.hpp"
 
-#include <expected>
+#include <optional>
 #include <string>
 
 #include "glad.h"
@@ -13,7 +13,7 @@
 #include "glw/debug.hpp"
 
 namespace glw {
-    unsigned int GetInternalFormatFromChannelNum(int channel_num);
+    unsigned int GetGLFormatFromChannelNum(int channel_num);
     unsigned int GetFilter(TextureFilter glw_filter);
 
     void Texture::Bind(unsigned int unit) {
@@ -33,7 +33,8 @@ namespace glw {
         glBindImageTexture(unit, texture_id, 0, false, 0, gl_access, GL_RGBA8);
     }
 
-    std::expected<Texture, bool> CreateTexture(int width, int height) {
+    // TODO: error handling
+    std::optional<Texture> CreateTexture(int width, int height) {
         Texture result;
         glCreateTextures(GL_TEXTURE_2D, 1, &result.texture_id);
 
@@ -50,7 +51,7 @@ namespace glw {
 
     bool LoadTextureFromFile(
         Texture* texture, const std::string& path,
-        int desired_channel_num, bool generate_mipmap
+        bool generate_mipmap
     ) {
         // Remember these so that we can check if
         // memory was allocated for the texture or not
@@ -60,7 +61,7 @@ namespace glw {
         // Load image from file
         int channel_num;
         u8* pixels = stbi_load(
-            path.c_str(), &texture->width, &texture->height, &channel_num, desired_channel_num);
+            path.c_str(), &texture->width, &texture->height, &channel_num, STBI_rgb_alpha);
         if (pixels == nullptr) {
             Debug::Print("Could not load texture from file: {}", path);
             return false;
@@ -74,7 +75,7 @@ namespace glw {
         // Fill the allocated memory
         glTextureSubImage2D(
             texture->texture_id, 0, 0, 0, texture->width, texture->height,
-            GetInternalFormatFromChannelNum(desired_channel_num), GL_UNSIGNED_BYTE, pixels
+            GL_RGBA, GL_UNSIGNED_BYTE, pixels
         );
 
         if (generate_mipmap) {
@@ -88,7 +89,8 @@ namespace glw {
         glBindSampler(unit, sampler_id);
     }
 
-    std::expected<Sampler, bool> CreateSampler(
+    // TODO: error handling
+    std::optional<Sampler> CreateSampler(
         TextureFilter min_filter,
         TextureFilter mag_filter
     ) {
@@ -103,7 +105,7 @@ namespace glw {
         return result;
     }
 
-    unsigned int GetInternalFormatFromChannelNum(int channel_num) {
+    unsigned int GetGLFormatFromChannelNum(int channel_num) {
         switch (channel_num) {
             case 1: return GL_RED;
             case 2: return GL_RG;

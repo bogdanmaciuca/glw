@@ -1,7 +1,7 @@
 #ifndef VAO_HPP
 #define VAO_HPP
 
-#include <expected>
+#include <optional>
 #include <vector>
 #include <type_traits>
 
@@ -21,14 +21,30 @@ namespace glw {
         void Bind();
         void Draw();
     };
+
+    /**
+    * @brief Creates a vertex array object which encapsulates a
+    * vertex buffer and an index buffer.
+    *
+    * @param [in] vertices An std::vector of the vertices of the
+    * mesh. They can be of any Vertex<...> type.
+    * @param [in] indices An std::vector of the indices of the
+    * mesh, if it supports them. otherwise an empty vector
+    *
+    * @return An std::optional object containing the VAO on success
+    * or std::nullopt on failure
+    *
+    * @note The fields of the Vertex<...> type can only be from
+    * {f32, f64, i32, u32, vec2, vec3, vec4, ivec2, ivec3, ivec4}
+    */
     template<IsVertex V, typename I = u32>
-    std::expected<VAO, bool> CreateVAO(
+    std::optional<VAO> CreateVAO(
         const std::vector<V> vertices,
         const std::vector<I> indices = {}
     ) {
         if (vertices.empty()) {
             Debug::Print("vertices cannot be empty");
-            return std::unexpected(false);
+            return std::nullopt;
         }
 
         VAO result;

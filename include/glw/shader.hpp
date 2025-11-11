@@ -4,7 +4,7 @@
 #ifndef SHADER_HPP
 #define SHADER_HPP
 
-#include <expected>
+#include <optional>
 #include <string>
 #include <span>
 #include <bitset>
@@ -32,7 +32,17 @@ namespace glw {
         std::string fragment_path;
         bool Reload();
     };
-    std::expected<GraphicsShader, bool> CreateGraphicsShader(
+
+    /**
+    * @brief Creates a graphics shader program
+    * 
+    * @param [in] vertex_path Path of the vertex shader
+    * @param [in] fragment_path Path of the fragment shader
+    *
+    * @return An std::optional object containing the GraphicsShader
+    * on success or std::nullopt on failure
+    */
+    std::optional<GraphicsShader> CreateGraphicsShader(
         const std::string& vertex_path,
         const std::string& fragment_path
     );
@@ -54,10 +64,25 @@ namespace glw {
         );
         void MemoryBarrier(std::bitset<MEM_BARRIER_COUNT> barriers);
         
+        /**
+         * @brief Gets the maximum work group number in each direction
+         */
         static ivec3 GetMaxWorkGroupCount();
+        /**
+         * @brief Gets the maximum number of invocation in ONE work group
+         */
         static int GetMaxInvocationCount();
     };
-    std::expected<ComputeShader, bool> CreateComputeShader(const std::string& path);
+
+    /**
+    * @brief Creates a compute shader program
+    * 
+    * @param [in] path Path of the compute shader
+    *
+    * @return An std::optional object containing the ComputeShader
+    * on success or std::nullopt on failure
+    */
+    std::optional<ComputeShader> CreateComputeShader(const std::string& path);
 }
 
 #endif // SHADER_HPP

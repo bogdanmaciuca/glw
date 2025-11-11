@@ -61,7 +61,6 @@ namespace glw {
             ForEachVertexField<V, F, I+1, Offset + sizeof(vertex.template get<I>())>(vertex, func);
         }
     }
-
 }
 
 #endif // VERTEX_HPP

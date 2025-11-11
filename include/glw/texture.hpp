@@ -1,7 +1,7 @@
 #ifndef TEXTURE_HPP
 #define TEXTURE_HPP
 
-#include <expected>
+#include <optional>
 #include <string>
 
 #include "types.hpp"
@@ -22,10 +22,34 @@ namespace glw {
     };
 
     // TODO: different texture formats
-    std::expected<Texture, bool> CreateTexture(int width = 0, int height = 0);
+    /**
+    * @brief Creates a texture object
+    *
+    * @param [in] width  Width of the texture (default 0)
+    * @param [in] height Height of the texture (default 0)
+    * 
+    * @return An std::optional object containing the Texture on
+    * success or std::nullopt on failure
+    *
+    * @note No memory space will be allocated for the texture if
+    * width or height are 0
+    */
+    std::optional<Texture> CreateTexture(int width = 0, int height = 0);
+
+    // TODO: allow to change the internal format
+    /**
+    * @brief Loads a texture from disk into a texture
+    *
+    * @param [out] texture A pointer to the texture to fill
+    * @param [in] path The path to the image on disk
+    * @param [in] generate_mipmap Whether or not to generate a
+    * mipmap for the texture
+    *
+    * @return true on success or false on failure
+    */
     bool LoadTextureFromFile(
         Texture* texture, const std::string& path,
-        int desired_channel_num = 4, bool generate_mipmap = true
+        bool generate_mipmap = true
     );
 
     struct Sampler {
@@ -39,7 +63,17 @@ namespace glw {
     };
     
     // TODO: add options for wrapping
-    std::expected<Sampler, bool> CreateSampler(
+    /**
+    * @brief Creates a sampler
+    *
+    * @param [in] min_filter How the texture should be
+    * sampled when zooming out
+    * @param [in] min_filter How the texture should be
+    * sampled when zooming in
+    * @return An std::optional object containing the Sampler
+    * on success or std::nullopt if creation fails.
+    */
+    std::optional<Sampler> CreateSampler(
         TextureFilter min_filter,
         TextureFilter mag_filter
     );
